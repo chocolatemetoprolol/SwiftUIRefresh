@@ -11,6 +11,7 @@ struct MCRefreshableVerticalScrollView<Content: View>: View {
     @State private var preOffset: CGFloat = 0
     @State private var offset: CGFloat = 0
     @State private var frozen = false
+    @State private var isHidden = true
     @State private var rotation: Angle = .degrees(0)
     @State private var updateTime: Date = Date()
     
@@ -40,6 +41,7 @@ struct MCRefreshableVerticalScrollView<Content: View>: View {
                     RefreshHeader(height: self.threshold,
                                   loading: self.refreshing,
                                   frozen: self.frozen,
+                                  isHidden: self.isHidden,
                                   rotation: self.rotation,
                                   updateTime: self.updateTime)
                 }
@@ -65,7 +67,11 @@ struct MCRefreshableVerticalScrollView<Content: View>: View {
             let fixedBounds = values.first(where: { $0.viewType == .fixedPositionView })?.bounds ?? .zero
             
             self.offset = movingBounds.minY - fixedBounds.minY
-            
+            if self.offset > 0 {
+                isHidden = false
+            } else {
+                isHidden = true
+            }
             self.rotation = self.headerRotation(self.offset)
             /// 触发刷新
             if !self.refreshing, self.offset > self.threshold, self.preOffset <= self.threshold {
@@ -122,8 +128,9 @@ struct MCRefreshableVerticalScrollView<Content: View>: View {
     
     struct RefreshHeader: View {
         var height: CGFloat
-        var loading: Bool
-        var frozen: Bool
+          var loading: Bool
+          var frozen: Bool
+        var isHidden: Bool
         var rotation: Angle
         var updateTime: Date
         
@@ -135,40 +142,41 @@ struct MCRefreshableVerticalScrollView<Content: View>: View {
         
         var body: some View {
             HStack(spacing: 20) {
-                Spacer()
-                
-                Group {
-                    if self.loading {
-                        VStack {
-                            Spacer()
-                            ActivityRep()
-                            Spacer()
-                        }
-                    } else {
-                        Image(systemName: "arrow.down")
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .rotationEffect(rotation)
-                    }
-                }
-                .frame(width: height * 0.25, height: height * 0.8)
-                .fixedSize()
-                .offset(y: (loading && frozen) ? 0 : -height)
-                
-                VStack(spacing: 5) {
-                    Text("\(self.loading ? "正在刷新数据" : "下拉刷新数据")")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                    
-                    Text("\(self.dateFormatter.string(from: updateTime))")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                }
-                .offset(y: -height + (loading && frozen ? +height : 0.0))
-                
-                Spacer()
-            }
-            .frame(height: height)
+                 Spacer()
+                 Group {
+                     if self.loading {
+                         VStack {
+                             Spacer()
+                             ActivityRep()
+                             Spacer()
+                         }
+                         
+                     } else {
+                         Image(systemName: "arrow.down")
+                             .resizable()
+                             .aspectRatio(contentMode: .fit)
+                             .rotationEffect(rotation)
+                     }
+                 }
+                 .frame(width: height * 0.25, height:  height * 0.8 )
+                 .fixedSize()
+                 .offset(y: (loading && frozen) ? 0 : -height)
+                 
+                 VStack(spacing: 5) {
+                     Text("\(self.loading ? "正在刷新数据" : "下拉刷新数据")")
+                         .foregroundColor(.secondary)
+                         .font(.subheadline)
+                     
+                     Text("\(self.dateFormatter.string(from: updateTime))")
+                         .foregroundColor(.secondary)
+                         .font(.subheadline)
+                 }
+                 .offset(y: -height + (loading && frozen ? +height : 0.0))
+                 
+                 Spacer()
+             }
+            .frame(height:  height).opacity( (isHidden && !loading) ? 0 : 1)
+           
         }
     }
 }
